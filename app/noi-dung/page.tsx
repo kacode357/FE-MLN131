@@ -12,6 +12,23 @@ import { useState, useEffect } from "react"
 // Import dữ liệu
 import { contentTopics } from "@/constants/content"
 
+// --- Dữ liệu đa ngôn ngữ cho tiêu đề và mô tả trang ---
+const pageContent = {
+  vi: {
+    title: "Chủ nghĩa xã hội và thời kỳ quá độ lên chủ nghĩa xã hội",
+    description: "Khám phá các khía cạnh quan trọng của Chủ nghĩa xã hội và con đường đi lên chủ nghĩa xã hội.",
+  },
+  en: {
+    title: "Socialism and the Transition Period to Socialism",
+    description: "Explore the crucial aspects of Socialism and the path towards it.",
+  },
+  ja: {
+    title: "社会主義と社会主義への移行期間",
+    description: "社会主義の重要な側面と、それへの道筋を探求しましょう。",
+  },
+  // Thêm các ngôn ngữ khác nếu cần
+};
+
 function ContentSelectionPage() {
   const { language, setLanguage, t } = useLanguage()
   const [isVisible, setIsVisible] = useState(false)
@@ -44,6 +61,9 @@ function ContentSelectionPage() {
     setExpandedCard(expandedCard === cardId ? null : cardId)
   }
 
+  // --- Lấy tiêu đề và mô tả theo ngôn ngữ hiện tại ---
+  const currentLangContent = pageContent[language] || pageContent.en;
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation currentLanguage={language} onLanguageChange={setLanguage} />
@@ -57,18 +77,18 @@ function ContentSelectionPage() {
             <div>
               <nav className="text-sm text-muted-foreground mb-2 md:mb-4">
                 <Link href="/" className="hover:text-primary transition-colors">
-                  {language === "vi" ? "Trang chủ" : language === "en" ? "Home" : "ホーム"}
+                  {language === "vi" ? "Trang chủ" : language === "en" ? "Home" : language === "ja" ? "ホーム" : ""}
                 </Link>
                 <span className="mx-2">/</span>
                 <span>{t("nav.content")}</span>
               </nav>
               <h1 className="text-3xl md:text-5xl font-bold mb-3">
-                {/* Tiêu đề mới */}
-                Chủ nghĩa xã hội và thời kỳ quá độ lên chủ nghĩa xã hội
+                {/* Tiêu đề mới - đa ngôn ngữ */}
+                {currentLangContent.title}
               </h1>
               <p className="text-base md:text-xl text-muted-foreground max-w-3xl">
-                {/* Mô tả mới */}
-                Khám phá các khía cạnh quan trọng của Chủ nghĩa xã hội và con đường đi lên chủ nghĩa xã hội.
+                {/* Mô tả mới - đa ngôn ngữ */}
+                {currentLangContent.description}
               </p>
             </div>
 
@@ -80,8 +100,10 @@ function ContentSelectionPage() {
                   language === "vi"
                     ? "Tìm kiếm nội dung..."
                     : language === "en"
-                    ? "Search content..."
-                    : "コンテンツを検索..."
+                      ? "Search content..."
+                      : language === "ja"
+                        ? "コンテンツを検索..."
+                        : "Search content..."
                 }
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -146,7 +168,7 @@ function ContentSelectionPage() {
                       <div className="flex items-center gap-1">
                         <BookOpen className="h-4 w-4" />
                         {topic.topics.length}{" "}
-                        {language === "vi" ? "phần" : language === "en" ? "sections" : "セクション"}
+                        {language === "vi" ? "phần" : language === "en" ? "sections" : language === "ja" ? "セクション" : "sections"}
                       </div>
                       <div className="flex items-center gap-1">
                         <Eye className="h-4 w-4" />
@@ -159,8 +181,10 @@ function ContentSelectionPage() {
                         {language === "vi"
                           ? "Nội dung chính:"
                           : language === "en"
-                          ? "Main topics:"
-                          : "主なトピック:"}
+                            ? "Main topics:"
+                            : language === "ja"
+                              ? "主なトピック:"
+                              : "Main topics:"}
                       </div>
                       <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
                         {/* Mobile: toggle bằng state */}
@@ -194,16 +218,8 @@ function ContentSelectionPage() {
                           className="flex items-center gap-1 text-xs text-primary hover:underline md:hidden"
                         >
                           {isExpanded
-                            ? language === "vi"
-                              ? "Thu gọn"
-                              : language === "en"
-                              ? "Show less"
-                              : "閉じる"
-                            : language === "vi"
-                            ? "Xem thêm"
-                            : language === "en"
-                            ? "Show more"
-                            : "もっと見る"}
+                            ? language === "vi" ? "Thu gọn" : language === "en" ? "Show less" : language === "ja" ? "閉じる" : "Show less"
+                            : language === "vi" ? "Xem thêm" : language === "en" ? "Show more" : language === "ja" ? "もっと見る" : "Show more"}
                           {isExpanded ? (
                             <ChevronUp className="h-3 w-3" />
                           ) : (
