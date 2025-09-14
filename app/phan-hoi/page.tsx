@@ -1,3 +1,4 @@
+// app/phan-hoi/page.tsx
 "use client"
 
 import type React from "react"
@@ -22,6 +23,20 @@ const EMAILJS_PUBLIC_KEY = "od5MXMazz5qwE9WQC"
 const ADMIN_NAME = "Ka" // Tên người nhận góp ý (to_name)
 // -------------------------------
 
+// 🌟 Tăng độ nổi bật khi người dùng nhập (focus)
+// Dùng chung cho Input, Textarea, SelectTrigger
+// Tao thêm border-2 và focus-visible:border-primary để viền rõ hơn
+const fieldFocusClass = [
+  "focus-visible:outline-none",
+  "focus-visible:ring-4", // vòng sáng rõ ràng
+  "focus-visible:ring-primary/40",
+  "focus-visible:ring-offset-0",
+  "transition-shadow",
+  "border-2", // Viền dày hơn
+  "border-gray-300", // Màu viền mặc định
+  "focus-visible:border-primary", // Màu viền khi focus
+].join(" ")
+
 // Feedback data for different languages
 const feedbackData = {
   vi: {
@@ -32,7 +47,7 @@ const feedbackData = {
       email: "Email",
       category: "Loại phản hồi",
       rating: "Đánh giá tổng thể",
-      subject: "Tiêu đề",
+      // subject: "Tiêu đề", // Đã bỏ
       message: "Nội dung phản hồi",
       submit: "Gửi phản hồi",
       categories: {
@@ -57,7 +72,7 @@ const feedbackData = {
       email: "Email",
       category: "Feedback Type",
       rating: "Overall Rating",
-      subject: "Subject",
+      // subject: "Subject", // Đã bỏ
       message: "Feedback Content",
       submit: "Send Feedback",
       categories: {
@@ -82,7 +97,7 @@ const feedbackData = {
       email: "メールアドレス",
       category: "フィードバックの種類",
       rating: "総合評価",
-      subject: "件名",
+      // subject: "件名", // Đã bỏ
       message: "フィードバック内容",
       submit: "フィードバックを送信",
       categories: {
@@ -108,7 +123,7 @@ function FeedbackPage() {
     email: "",
     category: "",
     rating: "",
-    subject: "",
+    // subject: "", // Đã bỏ
     message: "",
     to_name: ADMIN_NAME, // Luôn truyền field này lên EmailJS
   })
@@ -116,7 +131,7 @@ function FeedbackPage() {
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState("") // Thêm state cho lỗi
 
-  const content = feedbackData[language]
+  const content = feedbackData[language as keyof typeof feedbackData]
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({
@@ -132,12 +147,7 @@ function FeedbackPage() {
     setError("") // Reset lỗi cũ
 
     try {
-      await emailjs.send(
-        EMAILJS_SERVICE_ID,
-        EMAILJS_TEMPLATE_ID,
-        formData,
-        EMAILJS_PUBLIC_KEY
-      )
+      await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, formData, EMAILJS_PUBLIC_KEY)
       setSubmitted(true)
 
       // Reset form sau 3 giây
@@ -148,7 +158,7 @@ function FeedbackPage() {
           email: "",
           category: "",
           rating: "",
-          subject: "",
+          // subject: "", // Đã bỏ
           message: "",
           to_name: ADMIN_NAME,
         })
@@ -167,6 +177,7 @@ function FeedbackPage() {
     ))
   }
 
+  // Kiểm tra form hợp lệ dựa trên các trường còn lại
   const isFormValid = formData.name && formData.email && formData.category && formData.rating && formData.message
 
   return (
@@ -181,7 +192,7 @@ function FeedbackPage() {
             <p className="text-xl text-muted-foreground">{content.subtitle}</p>
           </div>
 
-          <div className="grid lg:grid-cols-1 gap-8"> {/* Chỉ còn 1 cột */}
+          <div className="grid lg:grid-cols-1 gap-8">
             {/* Feedback Form */}
             <Card>
               <CardHeader>
@@ -193,8 +204,8 @@ function FeedbackPage() {
                   {language === "vi"
                     ? "Vui lòng điền thông tin để gửi phản hồi"
                     : language === "en"
-                      ? "Please fill in the information to send feedback"
-                      : "フィードバックを送信するために情報を入力してください"}
+                    ? "Please fill in the information to send feedback"
+                    : "フィードバックを送信するために情報を入力してください"}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -210,8 +221,8 @@ function FeedbackPage() {
                       {language === "vi"
                         ? "Phản hồi của bạn đã được gửi thành công."
                         : language === "en"
-                          ? "Your feedback has been sent successfully."
-                          : "フィードバックが正常に送信されました。"}
+                        ? "Your feedback has been sent successfully."
+                        : "フィードバックが正常に送信されました。"}
                     </p>
                     <Button onClick={() => { setSubmitted(false); setError(""); }} className="mt-4">
                       {language === "vi" ? "Gửi phản hồi khác" : language === "en" ? "Send Another Feedback" : "別のフィードバックを送信"}
@@ -224,6 +235,9 @@ function FeedbackPage() {
                         <Label htmlFor="name">{content.form.name}</Label>
                         <Input
                           id="name"
+                          autoFocus
+                          placeholder={language === "vi" ? "Nhập họ tên" : language === "en" ? "Enter full name" : "氏名を入力"}
+                          className={fieldFocusClass}
                           value={formData.name}
                           onChange={(e) => handleInputChange("name", e.target.value)}
                           required
@@ -234,6 +248,8 @@ function FeedbackPage() {
                         <Input
                           id="email"
                           type="email"
+                          placeholder="you@example.com"
+                          className={fieldFocusClass}
                           value={formData.email}
                           onChange={(e) => handleInputChange("email", e.target.value)}
                           required
@@ -244,7 +260,7 @@ function FeedbackPage() {
                     <div className="space-y-2">
                       <Label>{content.form.category}</Label>
                       <Select value={formData.category} onValueChange={(value) => handleInputChange("category", value)}>
-                        <SelectTrigger>
+                        <SelectTrigger className={fieldFocusClass}>
                           <SelectValue placeholder={content.form.category} />
                         </SelectTrigger>
                         <SelectContent>
@@ -260,25 +276,25 @@ function FeedbackPage() {
                       <Label>{content.form.rating}</Label>
                       <RadioGroup value={formData.rating} onValueChange={(value) => handleInputChange("rating", value)}>
                         <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="5" id="rating-5" />
+                          <RadioGroupItem className="border-2 data-[state=checked]:border-primary data-[state=checked]:bg-primary/20" value="5" id="rating-5" />
                           <Label htmlFor="rating-5" className="flex items-center gap-2">
                             {renderStars(5)} {content.form.ratings.excellent}
                           </Label>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="4" id="rating-4" />
+                          <RadioGroupItem className="border-2 data-[state=checked]:border-primary data-[state=checked]:bg-primary/20" value="4" id="rating-4" />
                           <Label htmlFor="rating-4" className="flex items-center gap-2">
                             {renderStars(4)} {content.form.ratings.good}
                           </Label>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="3" id="rating-3" />
+                          <RadioGroupItem className="border-2 data-[state=checked]:border-primary data-[state=checked]:bg-primary/20" value="3" id="rating-3" />
                           <Label htmlFor="rating-3" className="flex items-center gap-2">
                             {renderStars(3)} {content.form.ratings.average}
                           </Label>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="2" id="rating-2" />
+                          <RadioGroupItem className="border-2 data-[state=checked]:border-primary data-[state=checked]:bg-primary/20" value="2" id="rating-2" />
                           <Label htmlFor="rating-2" className="flex items-center gap-2">
                             {renderStars(2)} {content.form.ratings.poor}
                           </Label>
@@ -286,20 +302,15 @@ function FeedbackPage() {
                       </RadioGroup>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="subject">{content.form.subject}</Label>
-                      <Input
-                        id="subject"
-                        value={formData.subject}
-                        onChange={(e) => handleInputChange("subject", e.target.value)}
-                      />
-                    </div>
+                    {/* Phần nhập tiêu đề đã được bỏ đi */}
 
                     <div className="space-y-2">
                       <Label htmlFor="message">{content.form.message}</Label>
                       <Textarea
                         id="message"
                         rows={4}
+                        placeholder={language === "vi" ? "Nhập nội dung phản hồi..." : language === "en" ? "Type your feedback..." : "フィードバック内容を入力..."}
+                        className={fieldFocusClass} // Áp dụng class focus cho Textarea
                         value={formData.message}
                         onChange={(e) => handleInputChange("message", e.target.value)}
                         required
@@ -319,7 +330,7 @@ function FeedbackPage() {
                         </div>
                       )}
                     </Button>
-                    {error && <p className="text-red-500 text-sm mt-2 text-center">{error}</p>} {/* Hiển thị lỗi */}
+                    {error && <p className="text-red-500 text-sm mt-2 text-center">{error}</p>}
                   </form>
                 )}
               </CardContent>

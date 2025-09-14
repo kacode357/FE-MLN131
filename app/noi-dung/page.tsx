@@ -1,4 +1,3 @@
-// app/noi-dung/page.tsx
 "use client"
 
 import { Navigation } from "@/components/navigation"
@@ -17,7 +16,7 @@ function ContentSelectionPage() {
   const { language, setLanguage, t } = useLanguage()
   const [isVisible, setIsVisible] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
-  const [expandedCard, setExpandedCard] = useState<string | null>(null) // mobile toggle
+  const [expandedCard, setExpandedCard] = useState<string | null>(null) // Mobile toggle state
 
   useEffect(() => {
     setIsVisible(true)
@@ -40,6 +39,11 @@ function ContentSelectionPage() {
     return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
   }
 
+  // --- Logic mới để xử lý hiển thị danh sách ---
+  const toggleCardExpansion = (cardId: string) => {
+    setExpandedCard(expandedCard === cardId ? null : cardId)
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation currentLanguage={language} onLanguageChange={setLanguage} />
@@ -59,18 +63,12 @@ function ContentSelectionPage() {
                 <span>{t("nav.content")}</span>
               </nav>
               <h1 className="text-3xl md:text-5xl font-bold mb-3">
-                {language === "vi"
-                  ? "Nội dung học tập"
-                  : language === "en"
-                  ? "Learning Content"
-                  : "学習コンテンツ"}
+                {/* Tiêu đề mới */}
+                Chủ nghĩa xã hội và thời kỳ quá độ lên chủ nghĩa xã hội
               </h1>
               <p className="text-base md:text-xl text-muted-foreground max-w-3xl">
-                {language === "vi"
-                  ? "Chọn phần nội dung bạn muốn khám phá về tư tưởng Hồ Chí Minh."
-                  : language === "en"
-                  ? "Choose the section you want to explore about Ho Chi Minh's thought."
-                  : "ホー・チ・ミンの思想について学びたいセクションを選んでください。"}
+                {/* Mô tả mới */}
+                Khám phá các khía cạnh quan trọng của Chủ nghĩa xã hội và con đường đi lên chủ nghĩa xã hội.
               </p>
             </div>
 
@@ -106,6 +104,8 @@ function ContentSelectionPage() {
                   /* p-0 để bỏ padding root; overflow-hidden để ảnh “ôm” sát viền */
                   className="group p-0 overflow-hidden hover:scale-[1.02] hover:shadow-lg transition-all duration-300 cursor-pointer border hover:border-primary/50 flex flex-col"
                   style={{ animationDelay: `${index * 100}ms` }}
+                  // Trên mobile, click để mở/đóng
+                  onClick={() => toggleCardExpansion(topic.id)}
                 >
                   {/* Ảnh */}
                   <div className="aspect-video relative overflow-hidden">
@@ -177,21 +177,20 @@ function ContentSelectionPage() {
                             ))}
 
                         {/* Desktop hover */}
-                        <div className="hidden md:block">
-                          <div className="hidden group-hover:block">
-                            {topic.topics.slice(2).map((subtopic, i) => (
-                              <li key={`extra-${i}`} className="truncate">
-                                {subtopic}
-                              </li>
-                            ))}
-                          </div>
+                        {/* Danh sách đầy đủ chỉ hiển thị khi hover trên desktop */}
+                        <div className="hidden md:block group-hover:block">
+                          {topic.topics.slice(2).map((subtopic, i) => (
+                            <li key={`extra-${i}`} className="truncate">
+                              {subtopic}
+                            </li>
+                          ))}
                         </div>
                       </ul>
 
                       {/* Nút toggle mobile */}
                       {topic.topics.length > 2 && (
                         <button
-                          onClick={() => setExpandedCard(isExpanded ? null : topic.id)}
+                          onClick={() => toggleCardExpansion(topic.id)}
                           className="flex items-center gap-1 text-xs text-primary hover:underline md:hidden"
                         >
                           {isExpanded

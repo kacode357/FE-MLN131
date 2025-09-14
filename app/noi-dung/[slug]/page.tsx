@@ -5,6 +5,7 @@ import { Navigation } from "@/components/navigation"
 import { LanguageProvider, useLanguage } from "@/components/language-provider"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import {
   Volume2,
   VolumeX,
@@ -40,6 +41,10 @@ const I18N = {
     jumpHint: "Bấm ←/→ để chuyển phần",
     minRead: "phút đọc",
     goToPart: (i: number) => `Đi tới phần ${i}`,
+    // New strings for done dialog
+    completeTitle: "Bạn đã hoàn thành bài học!",
+    completeDesc: "Tuyệt vời! Bạn có thể quay lại trang nội dung để chọn bài khác.",
+    stayHere: "Ở lại trang này",
   },
   en: {
     home: "Home",
@@ -54,6 +59,10 @@ const I18N = {
     jumpHint: "Press ←/→ to navigate",
     minRead: "min read",
     goToPart: (i: number) => `Go to section ${i}`,
+    // New strings for done dialog
+    completeTitle: "Lesson completed!",
+    completeDesc: "Great job. You can return to the contents and pick another lesson.",
+    stayHere: "Stay on this page",
   },
   ja: {
     home: "ホーム",
@@ -68,6 +77,10 @@ const I18N = {
     jumpHint: "←/→ で移動",
     minRead: "分で読めます",
     goToPart: (i: number) => `第${i}セクションへ`,
+    // New strings for done dialog
+    completeTitle: "レッスンを完了しました！",
+    completeDesc: "お疲れさまです。コンテンツ一覧に戻って別のレッスンを選べます。",
+    stayHere: "このページにとどまる",
   },
 } as const
 
@@ -84,7 +97,7 @@ function normalizeLang(raw?: string) {
 // Map các slug EN/JA (hoặc slug tuỳ thích) -> slug chuẩn trong data
 const SLUG_ALIASES: Record<string, string> = {
   // EN aliases
-  "socialism": "chu-nghia-xa-hoi",
+  socialism: "chu-nghia-xa-hoi",
   "conditions-of-birth": "dieu-kien-ra-doi",
   "essential-characteristics": "dac-trung-ban-chat",
   // (có slug nào khác thì thêm tiếp ở đây)
@@ -120,9 +133,7 @@ function useSpeechVoices() {
 // Chọn voice theo locale (ưu tiên đúng vùng, sau đó theo ngôn ngữ)
 function pickVoice(voices: SpeechSynthesisVoice[], langCode: string) {
   if (!voices.length) return null
-  const exact = voices.find((v) =>
-    v.lang?.toLowerCase().startsWith(langCode.toLowerCase())
-  )
+  const exact = voices.find((v) => v.lang?.toLowerCase().startsWith(langCode.toLowerCase()))
   if (exact) return exact
   const prefix = langCode.split("-")[0]
   const sameLang = voices.find((v) => v.lang?.toLowerCase().startsWith(prefix))
@@ -166,11 +177,7 @@ function MobileTOC({
               }`}
             >
               <span className="inline-block h-2 w-2 rounded-full border border-current">
-                <span
-                  className={`block h-full w-full rounded-full ${
-                    active ? "bg-current" : "bg-transparent"
-                  }`}
-                />
+                <span className={`block h-full w-full rounded-full ${active ? "bg-current" : "bg-transparent"}`} />
               </span>
               <span className="max-w-48 truncate">{s.title}</span>
             </button>
@@ -191,15 +198,14 @@ function DetailedLessonPage() {
   const params = useParams()
   const rawSlugParam = (params?.slug ?? "") as string | string[]
   const slug = useMemo(() => {
-    const raw = decodeURIComponent(
-      Array.isArray(rawSlugParam) ? rawSlugParam[0] : rawSlugParam
-    )
+    const raw = decodeURIComponent(Array.isArray(rawSlugParam) ? rawSlugParam[0] : rawSlugParam)
     return toCanonicalSlug(raw)
   }, [rawSlugParam])
 
   const [currentSection, setCurrentSection] = useState<number>(0)
   const [isPlaying, setIsPlaying] = useState<boolean>(false)
   const [completedSections, setCompletedSections] = useState<number[]>([])
+  const [doneOpen, setDoneOpen] = useState<boolean>(false)
   const speechRef = useRef<SpeechSynthesisUtterance | null>(null)
   const voices = useSpeechVoices()
 
@@ -246,7 +252,7 @@ function DetailedLessonPage() {
   // Phím tắt ← / →
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight") nextSection()
+      if (e.key === "ArrowRight") handleNextOrDone()
       if (e.key === "ArrowLeft") prevSection()
     }
     window.addEventListener("keydown", handler)
@@ -264,9 +270,7 @@ function DetailedLessonPage() {
       return
     }
 
-    const u = new SpeechSynthesisUtterance(
-      content.sections[currentSection].content
-    )
+    const u = new SpeechSynthesisUtterance(content.sections[currentSection].content)
     const langToLocale: Record<string, string> = {
       vi: "vi-VN",
       en: "en-US",
@@ -318,6 +322,22 @@ function DetailedLessonPage() {
     }
   }
 
+  const handleNextOrDone = () => {
+    if (currentSection === totalSections - 1) {
+      // Mark last as completed and show dialog
+      if (!completedSections.includes(currentSection)) {
+        setCompletedSections((s) => [...s, currentSection])
+      }
+      if (isPlaying) {
+        window.speechSynthesis.cancel()
+        setIsPlaying(false)
+      }
+      setDoneOpen(true)
+    } else {
+      nextSection()
+    }
+  }
+
   const progress = Math.round(((currentSection + 1) / totalSections) * 100)
 
   const handleLangChange = (val: "vi" | "en" | "ja") => {
@@ -347,9 +367,7 @@ function DetailedLessonPage() {
 
           {/* Header */}
           <div className="mb-4 text-center md:mb-8">
-            <h1 className="mb-3 text-2xl font-bold md:mb-4 md:text-5xl">
-              {content.title}
-            </h1>
+            <h1 className="mb-3 text-2xl font-bold md:mb-4 md:text-5xl">{content.title}</h1>
 
             <div className="mb-4 flex items-center justify-center gap-3 text-xs text-muted-foreground md:mb-6 md:text-sm">
               <span>
@@ -357,22 +375,13 @@ function DetailedLessonPage() {
               </span>
 
               <div className="h-3 w-40 overflow-hidden rounded-full bg-muted md:w-48">
-                <motion.div
-                  className="h-3 rounded-full bg-primary"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${progress}%` }}
-                  transition={{ duration: 0.35 }}
-                />
+                <motion.div className="h-3 rounded-full bg-primary" initial={{ width: 0 }} animate={{ width: `${progress}%` }} transition={{ duration: 0.35 }} />
               </div>
 
               <span>{progress}%</span>
             </div>
 
-            <MobileTOC
-              sections={content.sections}
-              current={currentSection}
-              onJump={goToSection}
-            />
+            <MobileTOC sections={content.sections} current={currentSection} onJump={goToSection} />
           </div>
 
           <div className="grid gap-6 lg:grid-cols-4 lg:gap-8">
@@ -393,21 +402,13 @@ function DetailedLessonPage() {
                             onClick={() => goToSection(index)}
                             data-active={active}
                             aria-current={active ? "true" : "false"}
-                            className="group flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-left transition-all
-                                       hover:bg-muted/70
-                                       data-[active=true]:bg-primary data-[active=true]:text-primary-foreground
-                                       data-[active=true]:shadow-sm"
+                            className="group flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-left transition-all hover:bg-muted/70 data-[active=true]:bg-primary data-[active=true]:text-primary-foreground data-[active=true]:shadow-sm"
                           >
                             <Bullet done={done} active={active} />
 
-                            <span className="text-sm font-medium leading-6 line-clamp-2">
-                              {section.title}
-                            </span>
+                            <span className="text-sm font-medium leading-6 line-clamp-2">{section.title}</span>
 
-                            <span
-                              className="ml-auto h-1.5 w-8 rounded-full bg-muted-foreground/30 group-data-[active=true]:bg-primary/90"
-                              aria-hidden
-                            />
+                            <span className="ml-auto h-1.5 w-8 rounded-full bg-muted-foreground/30 group-data-[active=true]:bg-primary/90" aria-hidden />
                           </button>
                         </li>
                       )
@@ -422,21 +423,12 @@ function DetailedLessonPage() {
               <Card className="mb-4 md:mb-6">
                 <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div className="space-y-1">
-                    <CardTitle className="text-xl md:text-2xl">
-                      {content.sections[currentSection].title}
-                    </CardTitle>
-                    <div className="text-xs text-muted-foreground">
-                      {readingTime} • {t.jumpHint}
-                    </div>
+                    <CardTitle className="text-xl md:text-2xl">{content.sections[currentSection].title}</CardTitle>
+                    <div className="text-xs text-muted-foreground">{readingTime} • {t.jumpHint}</div>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleTextToSpeech}
-                      className="flex items-center gap-2 bg-transparent"
-                    >
+                    <Button variant="outline" size="sm" onClick={handleTextToSpeech} className="flex items-center gap-2 bg-transparent">
                       {isPlaying ? (
                         <>
                           <VolumeX className="h-4 w-4" />
@@ -455,69 +447,38 @@ function DetailedLessonPage() {
                 <CardContent>
                   <AnimatePresence mode="wait">
                     <motion.div
-                      key={`${uiLang}-${slug}-${currentSection}`} // force remount khi đổi ngôn ngữ/slug/section
+                      key={`${uiLang}-${slug}-${currentSection}`}
                       id="mdTop"
                       initial={{ opacity: 0, y: 16 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -12 }}
                       transition={{ duration: 0.35 }}
-                      className="rounded-2xl border bg-muted/40 p-4 md:p-6"
+                      className="rounded-2xl border bg-muted/40 p-4 md:p-6 [&_p>strong:first-child]:text-primary [&_p>strong:first-child]:bg-primary/10 [&_p>strong:first-child]:px-1.5 [&_p>strong:first-child]:py-0.5 [&_p>strong:first-child]:rounded-md [&_p>strong:first-child]:mr-1"
                     >
-                      <div
-                        className="prose prose-sm max-w-none dark:prose-invert md:prose-lg
-                                   prose-strong:text-foreground
-                                   prose-p:leading-7 prose-p:my-2 md:prose-p:leading-8
-                                   prose-h2:text-xl md:prose-h2:text-2xl
-                                   prose-h3:text-lg md:prose-h3:text-xl prose-h3:font-semibold prose-h3:mt-6 prose-h3:mb-3
-                                   [&_ul]:pl-6 [&_ul_ul]:pl-6 [&_ol]:pl-6 [&_ol_ol]:pl-6
-                                   prose-blockquote:border-l-4 prose-blockquote:border-primary/40 prose-blockquote:bg-primary/5 prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r-lg"
-                      >
+                      <div className="prose prose-sm max-w-none dark:prose-invert md:prose-lg prose-strong:text-foreground prose-p:leading-7 prose-p:my-2 md:prose-p:leading-8 prose-h2:text-xl md:prose-h2:text-2xl prose-h3:text-lg md:prose-h3:text-xl prose-h3:font-semibold prose-h3:mt-6 prose-h3:mb-3 [&_ul]:pl-6 [&_ul_ul]:pl-6 [&_ol]:pl-6 [&_ol_ol]:pl-6 prose-blockquote:border-l-4 prose-blockquote:border-primary/40 prose-blockquote:bg-primary/5 prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r-lg">
                         <ReactMarkdown
                           key={`${uiLang}-${slug}`}
                           remarkPlugins={[remarkGfm, remarkUnwrapImages]}
                           components={{
                             ul: (props: any) => {
                               const { node, className, ...rest } = props
-                              return (
-                                <ul
-                                  className={`list-disc list-outside pl-6 my-3 ${
-                                    className ?? ""
-                                  }`}
-                                  {...rest}
-                                />
-                              )
+                              return <ul className={`list-disc list-outside pl-6 my-3 ${className ?? ""}`} {...rest} />
                             },
                             ol: (props: any) => {
                               const { node, className, ...rest } = props
-                              return (
-                                <ol
-                                  className={`list-decimal list-outside pl-6 my-3 ${
-                                    className ?? ""
-                                  }`}
-                                  {...rest}
-                                />
-                              )
+                              return <ol className={`list-decimal list-outside pl-6 my-3 ${className ?? ""}`} {...rest} />
                             },
                             li: (props: any) => {
                               const { node, className, ...rest } = props
-                              return (
-                                <li
-                                  className={`mt-1 leading-7 md:leading-8 marker:text-primary ${
-                                    className ?? ""
-                                  }`}
-                                  {...rest}
-                                />
-                              )
+                              return <li className={`mt-1 leading-7 md:leading-8 marker:text-primary ${className ?? ""}`} {...rest} />
                             },
-                            // Không bọc <div> quanh ảnh để tránh <p><div/></p> (hydration error)
+                            // Không bọc <div> quanh ảnh để tránh hydration error
                             img: (props: any) => (
                               // eslint-disable-next-line @next/next/no-img-element
                               <img
                                 loading="lazy"
                                 alt={props.alt ?? ""}
-                                className={`block mx-auto my-4 rounded-xl shadow ${
-                                  props.className ?? ""
-                                }`}
+                                className={`block mx-auto my-4 rounded-xl shadow ${props.className ?? ""}`}
                                 {...props}
                               />
                             ),
@@ -533,12 +494,7 @@ function DetailedLessonPage() {
 
               {/* Navigation */}
               <div className="flex items-center justify-between">
-                <Button
-                  variant="outline"
-                  onClick={prevSection}
-                  disabled={currentSection === 0}
-                  className="flex items-center gap-2"
-                >
+                <Button variant="outline" onClick={prevSection} disabled={currentSection === 0} className="flex items-center gap-2">
                   <ChevronLeft className="h-4 w-4" /> {t.prev}
                 </Button>
 
@@ -548,20 +504,12 @@ function DetailedLessonPage() {
                       key={index}
                       aria-label={t.goToPart(index + 1)}
                       onClick={() => goToSection(index)}
-                      className={`h-2 w-2 rounded-full transition-colors md:h-3 md:w-3 ${
-                        index === currentSection
-                          ? "bg-primary"
-                          : "bg-muted hover:bg-muted-foreground/50"
-                      }`}
+                      className={`h-2 w-2 rounded-full transition-colors md:h-3 md:w-3 ${index === currentSection ? "bg-primary" : "bg-muted hover:bg-muted-foreground/50"}`}
                     />
                   ))}
                 </div>
 
-                <Button
-                  onClick={nextSection}
-                  disabled={currentSection === totalSections - 1}
-                  className="flex items-center gap-2"
-                >
+                <Button onClick={handleNextOrDone} className="flex items-center gap-2">
                   {currentSection === totalSections - 1 ? t.done : t.next}
                   <ChevronRight className="h-4 w-4" />
                 </Button>
@@ -576,6 +524,28 @@ function DetailedLessonPage() {
                   </Link>
                 </Button>
               </div>
+
+              {/* Done Dialog */}
+              <Dialog open={doneOpen} onOpenChange={setDoneOpen}>
+                <DialogContent className="sm:max-w-md text-center">
+                  <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-green-100">
+                    <CheckCircle className="h-8 w-8 text-green-600" />
+                  </div>
+                  <DialogHeader>
+                    <DialogTitle className="text-2xl font-bold">{t.completeTitle}</DialogTitle>
+                    <DialogDescription className="text-base">{t.completeDesc}</DialogDescription>
+                  </DialogHeader>
+
+                  <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-center">
+                    <Button asChild>
+                      <Link href="/noi-dung">{t.backToList}</Link>
+                    </Button>
+                    <Button variant="outline" onClick={() => setDoneOpen(false)}>
+                      {t.stayHere}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </section>
           </div>
         </div>
